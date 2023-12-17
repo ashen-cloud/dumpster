@@ -6,6 +6,7 @@ import struct
 import sys
 import threading
 import time
+import os
 import argparse
 import binascii
 
@@ -18,8 +19,21 @@ parser = ArgumentParser()
 
 parser.add_argument("-t", "--test", action=argparse.BooleanOptionalAction, help="Run memory dumping tests")
 parser.add_argument('pid', nargs='?', help='Pid to dump')
+parser.add_argument('-r', "--region", nargs='?', help='Memory region to dump (stack,heap,etc)')
+parser.add_argument('-o', "--out", nargs='?', help='File to dump to')
 
 args = parser.parse_args()
+
+region = args.region
+
+if os.geteuid() != 0:
+    print('Run this with sudo instead')
+    quit()
+
+
+if not region:
+    print('Memory region not specified, dumping the stack')
+    region = 'stack'
 
 if not args.test and not args.pid:
     print('Nothing to do')
@@ -177,6 +191,17 @@ if __name__ == '__main__':
 
     dumper.read_maps()
 
-    stack_memory = dumper.dump_range('stack')
-    heap_memory = dumper.dump_range('heap')
+    memory, indices = dumper.dump_range(region)
+
+    if args.out and args.out != '':
+        print(f'Writing to {args.out}')
+        try:
+            os.remove(args.out)
+        except Exception:
+            pass
+        with open(args.out, 'ab') as f:
+            for window in memory:
+                f.write(window)
+    else:
+        print(memory)
 
