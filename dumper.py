@@ -80,8 +80,8 @@ class Dumper:
     def get_range(self, name):  # one of stack,heap,etc
         for line in self.maps_raw:
             rng = [l.replace(' ' * 7, '') for l in line.strip().split(' ' * 19)]
-            if ('[' + name + ']') in rng:
-                return [int(el, 16) for el in rng[0].split(' ')[0].split('-')]  # [stack start address, stack end address]
+            if ('[' + name + ']') in ''.join(rng):
+                return [int(el, 16) for el in rng[0].split(' ')[0].split('-')]  # [start address, end address]
 
     def dump_range(self, name, pagesize=4096, winsize=4, filter=False):
         start, end = self.get_range(name)
