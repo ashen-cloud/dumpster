@@ -9,6 +9,7 @@ import time
 import os
 import argparse
 import binascii
+import ast
 
 from multiprocessing import Pool
 from argparse import ArgumentParser
@@ -21,10 +22,22 @@ parser.add_argument("-t", "--test", action=argparse.BooleanOptionalAction, help=
 parser.add_argument('pid', nargs='?', help='Pid to dump')
 parser.add_argument('-r', "--region", nargs='?', help='Memory region to dump (stack,heap,etc)')
 parser.add_argument('-o', "--out", nargs='?', help='File to dump to')
+parser.add_argument('-mb', "--match-bytes", nargs='?', help='Bytes to match')
+parser.add_argument('-mi', "--match-int", nargs='?', help='Integers to match')
 
 args = parser.parse_args()
 
 region = args.region
+
+
+def strbytes_to_bytes(st):  # todo: this is kinda sus
+    res = b''
+    a = st.split(' ')
+    for strbyte in a:
+        i = bytes.fromhex(strbyte)
+        res += i
+    return res
+
 
 if os.geteuid() != 0:
     print('Run this with sudo instead')
@@ -93,8 +106,17 @@ class Dumper:
                 continue
             for j in range(0, len(res), 4):
                 window = res[j: j + winsize]
-                memory.append(window)
-                indices.append(i)
+                if args.match_bytes is not None:
+                    if window in strbytes_to_bytes(args.match_bytes):
+                        memory.append(window)
+                        indices.append(i)
+                elif args.match_int is not None:
+                    if int.from_bytes(window, 'little') == int(args.match_int):
+                        memory.append(window)
+                        indices.append(i)
+                else:
+                    memory.append(window)
+                    indices.append(i)
 
         return memory, indices
 
@@ -203,5 +225,6 @@ if __name__ == '__main__':
             for window in memory:
                 f.write(window)
     else:
-        print(memory)
+        for x, z in zip(memory, indices):
+            print(z, x)
 
